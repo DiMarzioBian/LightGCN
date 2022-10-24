@@ -1,24 +1,14 @@
-"""
-Created on Mar 1, 2020
-Pytorch Implementation of LightGCN in
-Xiangnan He et al. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
-
-@author: Shuxian Bi (stanbi@mail.ustc.edu.cn),Jianbai Ye (gusye@mail.ustc.edu.cn)
-Design Dataset here
-Every dataset's index has to start at 0
-"""
-import os
 from os.path import join
-import sys
 import torch
 import numpy as np
 import pandas as pd
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 import world
 from world import cprint
 from time import time
+
 
 class BasicDataset(Dataset):
     def __init__(self):
@@ -66,6 +56,7 @@ class BasicDataset(Dataset):
             |R^T, I|
         """
         raise NotImplementedError
+
 
 class LastFM(BasicDataset):
     """
@@ -214,14 +205,9 @@ class LastFM(BasicDataset):
     def __len__(self):
         return len(self.trainUniqueUsers)
 
-class Loader(BasicDataset):
-    """
-    Dataset type for pytorch \n
-    Incldue graph information
-    gowalla dataset
-    """
 
-    def __init__(self,config = world.config,path="../data/gowalla"):
+class Loader(BasicDataset):
+    def __init__(self, config=world.config, path='./data/gowalla'):
         # train or test
         cprint(f'loading [{path}]')
         self.split = config['A_split']
@@ -239,11 +225,11 @@ class Loader(BasicDataset):
         self.testDataSize = 0
 
         with open(train_file) as f:
-            for l in f.readlines():
-                if len(l) > 0:
-                    l = l.strip('\n').split(' ')
-                    items = [int(i) for i in l[1:]]
-                    uid = int(l[0])
+            for line in f.readlines():
+                if len(line) > 0:
+                    line = line.strip('\n').split(' ')
+                    items = [int(i) for i in line[1:]]
+                    uid = int(line[0])
                     trainUniqueUsers.append(uid)
                     trainUser.extend([uid] * len(items))
                     trainItem.extend(items)
@@ -255,11 +241,11 @@ class Loader(BasicDataset):
         self.trainItem = np.array(trainItem)
 
         with open(test_file) as f:
-            for l in f.readlines():
-                if len(l) > 0:
-                    l = l.strip('\n').split(' ')
-                    items = [int(i) for i in l[1:]]
-                    uid = int(l[0])
+            for line in f.readlines():
+                if len(line) > 0:
+                    line = line.strip('\n').split(' ')
+                    items = [int(i) for i in line[1:]]
+                    uid = int(line[0])
                     testUniqueUsers.append(uid)
                     testUser.extend([uid] * len(items))
                     testItem.extend(items)
@@ -309,7 +295,7 @@ class Loader(BasicDataset):
     def allPos(self):
         return self._allPos
 
-    def _split_A_hat(self,A):
+    def _split_A_hat(self, A):
         A_fold = []
         fold_len = (self.n_users + self.m_items) // self.folds
         for i_fold in range(self.folds):
@@ -359,7 +345,7 @@ class Loader(BasicDataset):
                 print(f"costing {end-s}s, saved norm_mat...")
                 sp.save_npz(self.path + '/s_pre_adj_mat.npz', norm_adj)
 
-            if self.split == True:
+            if self.split:
                 self.Graph = self._split_A_hat(norm_adj)
                 print("done split matrix")
             else:

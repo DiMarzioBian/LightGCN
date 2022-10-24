@@ -7,15 +7,12 @@ Xiangnan He et al. LightGCN: Simplifying and Powering Graph Convolution Network 
 '''
 import world
 import torch
-from torch import nn, optim
+from torch import optim
 import numpy as np
-from torch import log
 from dataloader import BasicDataset
 from time import time
-from model import LightGCN
 from model import PairWiseModel
 from sklearn.metrics import roc_auc_score
-import random
 import os
 try:
     from cppimport import imp_from_filepath
@@ -98,19 +95,21 @@ def UniformSample_original_python(dataset):
 # ===================end samplers==========================
 # =====================utils====================================
 
+
 def set_seed(seed):
     np.random.seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
+
 
 def getFileName():
     if world.model_name == 'mf':
         file = f"mf-{world.dataset}-{world.config['latent_dim_rec']}.pth.tar"
     elif world.model_name == 'lgn':
         file = f"lgn-{world.dataset}-{world.config['lightGCN_n_layers']}-{world.config['latent_dim_rec']}.pth.tar"
-    return os.path.join(world.FILE_PATH,file)
+    return os.path.join(world.FILE_PATH, file)
+
 
 def minibatch(*tensors, **kwargs):
 

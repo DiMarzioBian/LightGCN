@@ -10,15 +10,9 @@ import world
 import numpy as np
 import torch
 import utils
-import dataloader
-from pprint import pprint
 from utils import timer
-from time import time
-from tqdm import tqdm
 import model
 import multiprocessing
-from sklearn.metrics import roc_auc_score
-
 
 CORES = multiprocessing.cpu_count() // 2
 
@@ -66,7 +60,7 @@ def test_one_batch(X):
         ret = utils.RecallPrecision_ATk(groundTrue, r, k)
         pre.append(ret['precision'])
         recall.append(ret['recall'])
-        ndcg.append(utils.NDCGatK_r(groundTrue,r,k))
+        ndcg.append(utils.NDCGatK_r(groundTrue, r, k))
     return {'recall':np.array(recall), 
             'precision':np.array(pre), 
             'ndcg':np.array(ndcg)}

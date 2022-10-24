@@ -1,17 +1,8 @@
-"""
-Created on Mar 1, 2020
-Pytorch Implementation of LightGCN in
-Xiangnan He et al. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
-
-@author: Jianbai Ye (gusye@mail.ustc.edu.cn)
-
-Define models here
-"""
 import world
 import torch
 from dataloader import BasicDataset
 from torch import nn
-import numpy as np
+from torch.nn import functional as F
 
 
 class BasicModel(nn.Module):    
@@ -20,7 +11,8 @@ class BasicModel(nn.Module):
     
     def getUsersRating(self, users):
         raise NotImplementedError
-    
+
+
 class PairWiseModel(BasicModel):
     def __init__(self):
         super(PairWiseModel, self).__init__()
@@ -34,7 +26,8 @@ class PairWiseModel(BasicModel):
             (log-loss, l2-loss)
         """
         raise NotImplementedError
-    
+
+
 class PureMF(BasicModel):
     def __init__(self, 
                  config:dict, 
@@ -62,11 +55,11 @@ class PureMF(BasicModel):
     
     def bpr_loss(self, users, pos, neg):
         users_emb = self.embedding_user(users.long())
-        pos_emb   = self.embedding_item(pos.long())
-        neg_emb   = self.embedding_item(neg.long())
-        pos_scores= torch.sum(users_emb*pos_emb, dim=1)
-        neg_scores= torch.sum(users_emb*neg_emb, dim=1)
-        loss = torch.mean(nn.functional.softplus(neg_scores - pos_scores))
+        pos_emb = self.embedding_item(pos.long())
+        neg_emb = self.embedding_item(neg.long())
+        pos_scores = torch.sum(users_emb*pos_emb, dim=1)
+        neg_scores = torch.sum(users_emb*neg_emb, dim=1)
+        loss = torch.mean(F.softplus(neg_scores - pos_scores))
         reg_loss = (1/2)*(users_emb.norm(2).pow(2) + 
                           pos_emb.norm(2).pow(2) + 
                           neg_emb.norm(2).pow(2))/float(len(users))
@@ -90,8 +83,8 @@ class LightGCN(BasicModel):
         self.__init_weight()
 
     def __init_weight(self):
-        self.num_users  = self.dataset.n_users
-        self.num_items  = self.dataset.m_items
+        self.num_users = self.dataset.n_users
+        self.num_items = self.dataset.m_items
         self.latent_dim = self.config['latent_dim_rec']
         self.n_layers = self.config['lightGCN_n_layers']
         self.keep_prob = self.config['keep_prob']
