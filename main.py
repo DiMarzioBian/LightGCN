@@ -5,7 +5,7 @@ import torch
 from tensorboardX import SummaryWriter
 
 from config import args, cprint
-from utils import load_ckpt, save_ckpt
+from utils.utils import load_ckpt, save_ckpt
 from dataloader import get_dataloader
 from models import PureMF, LightGCN
 from epoch import train, evaluate
@@ -48,10 +48,13 @@ def main():
     # training
     for epoch in range(epoch_cur, args.n_epoch):
         if epoch % 10 == 0:
-            evaluate(dataset, model, epoch, writer, args.multicore)
+            res = evaluate(dataset, model, epoch, writer, args.multicore)
+            print(f'\t| test | loss {res["loss"]:4d} | recall {res["loss"]:4d} | ndcg {res["loss"]:4d}  |')
 
-        res = train(model, optimizer, dataset, epoch=epoch, writer=writer)
-        print(f'Epoch {epoch+1}/{args.n_epoch}: {res}')
+        loss_tr, time_tr = train(model, optimizer, dataset, epoch=epoch, writer=writer)
+        print(f'\t| train {epoch+1:4d} | loss {loss_tr:.4f} | time {time_tr:.1f}s |')
+
+        scheduler.step()
         save_ckpt(epoch_cur, model.state_dict(), scheduler.state_dict())
 
     if args.tensorboard:
