@@ -1,53 +1,61 @@
-import world
-import utils
-from world import cprint
+from os.path import join
+import time
+import numpy as np
 import torch
 from tensorboardX import SummaryWriter
-import time
-import Procedure
-from os.path import join
-import register
-from register import dataset
+
+from config import args, cprint
+from utils import load_ckpt, save_ckpt
+from dataloader import get_dataloader
+from models import PureMF, LightGCN
+from epoch import train, evaluate
 
 
 def main():
-    utils.set_seed(world.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 
-    Recmodel = register.MODELS[world.model_name](world.config, dataset)
-    Recmodel = Recmodel.to(world.device)
-    bpr = utils.BPRLoss(Recmodel, world.config)
+    dataset = get_dataloader()
 
-    weight_file = utils.getFileName()
-    print(f"load and save to {weight_file}")
-    if world.LOAD:
+    if args.model == 'lightgcn':
+        model = LightGCN(dataset.get_sparse_graph()).to(args.cuda)
+    else:
+        assert args.model == 'mf'
+        model = PureMF().to(args.cuda)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_patience*2, gamma=args.lr_factor)
+
+    # load models
+    epoch_cur = 0
+    if not args.load:
         try:
-            Recmodel.load_state_dict(torch.load(weight_file,map_location=torch.device('cpu')))
-            world.cprint(f"loaded model weights from {weight_file}")
+            epoch_cur, model, scheduler = load_ckpt(model, scheduler)
+            cprint(f'Succeeded load model weights:')
         except FileNotFoundError:
-            print(f"{weight_file} not exists, start from beginning")
-    Neg_k = 1
+            cprint(f'Failed loading model weights:')
+    print(f'{args.path_ckpt}')
 
     # init tensorboard
-    if world.tensorboard:
-        w : SummaryWriter = SummaryWriter(
-                                        join(world.BOARD_PATH, time.strftime("%m-%d-%Hh%Mm%Ss-") + "-" + world.comment)
-                                        )
+    if args.tensorboard:
+        writer = SummaryWriter(join(args.path_board, time.strftime('%m-%d-%Hh%Mm%Ss-') + '-' + args.comment))
     else:
-        w = None
-        world.cprint("not enable tensorflowboard")
+        writer = None
+        cprint('Disable tensorboard.')
 
-    try:
-        for epoch in range(world.TRAIN_epochs):
-            start = time.time()
-            if epoch %10 == 0:
-                cprint("[TEST]")
-                Procedure.Test(dataset, Recmodel, epoch, w, world.config['multicore'])
-            output_information = Procedure.BPR_train_original(dataset, Recmodel, bpr, epoch, neg_k=Neg_k, w=w)
-            print(f'EPOCH[{epoch+1}/{world.TRAIN_epochs}] {output_information}')
-            torch.save(Recmodel.state_dict(), weight_file)
-    finally:
-        if world.tensorboard:
-            w.close()
+    # training
+    for epoch in range(epoch_cur, args.n_epoch):
+        if epoch % 10 == 0:
+            evaluate(dataset, model, epoch, writer, args.multicore)
+
+        res = train(model, optimizer, dataset, epoch=epoch, writer=writer)
+        print(f'Epoch {epoch+1}/{args.n_epoch}: {res}')
+        save_ckpt(epoch_cur, model.state_dict(), scheduler.state_dict())
+
+    if args.tensorboard:
+        writer.close()
 
 
 if __name__ == '__main__':

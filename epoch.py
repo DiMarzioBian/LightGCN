@@ -1,57 +1,43 @@
-'''
-Created on Mar 1, 2020
-Pytorch Implementation of LightGCN in
-Xiangnan He et al. LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
-@author: Jianbai Ye (gusye@mail.ustc.edu.cn)
-
-Design training and test process
-'''
-import world
+from config import args, cprint
 import numpy as np
 import torch
+from utils.sample import UniformSample_original
 import utils
 from utils import timer
-import model
+import models
 import multiprocessing
 
 CORES = multiprocessing.cpu_count() // 2
 
 
-def BPR_train_original(dataset, recommend_model, loss_class, epoch, neg_k=1, w=None):
-    Recmodel = recommend_model
-    Recmodel.train()
-    bpr: utils.BPRLoss = loss_class
+def train(model, optimizer, dataset, epoch, writer=None):
+    model.train()
     
     with timer(name="Sample"):
-        S = utils.UniformSample_original(dataset)
-    users = torch.Tensor(S[:, 0]).long()
-    posItems = torch.Tensor(S[:, 1]).long()
-    negItems = torch.Tensor(S[:, 2]).long()
+        S = UniformSample_original(dataset).to(args.device)
 
-    users = users.to(world.device)
-    posItems = posItems.to(world.device)
-    negItems = negItems.to(world.device)
-    users, posItems, negItems = utils.shuffle(users, posItems, negItems)
-    total_batch = len(users) // world.config['bpr_batch_size'] + 1
-    aver_loss = 0.
-    for (batch_i,
-         (batch_users,
-          batch_pos,
-          batch_neg)) in enumerate(utils.minibatch(users,
-                                                   posItems,
-                                                   negItems,
-                                                   batch_size=world.config['bpr_batch_size'])):
-        cri = bpr.stageOne(batch_users, batch_pos, batch_neg)
-        aver_loss += cri
-        if world.tensorboard:
-            w.add_scalar(f'BPRLoss/BPR', cri, epoch * int(len(users) / world.config['bpr_batch_size']) + batch_i)
-    aver_loss = aver_loss / total_batch
+    all_idx_u, all_idx_i_pos, all_idx_i_neg = utils.shuffle(torch.Tensor(S[:, 0]).long(),
+                                                            torch.Tensor(S[:, 1]).long(),
+                                                            torch.Tensor(S[:, 2]).long())
+    n_batch = len(all_idx_u) // args.tr_batch_size + 1
+    loss_total = 0.
+
+    for i, (idx_u, idx_i_pos, idx_i_neg) in enumerate(utils.minibatch(all_idx_u, all_idx_i_pos, all_idx_i_neg, batch_size=args.bpr_batch_size)):
+
+        loss_batch = model.cal_loss(idx_u, idx_i_pos, idx_i_neg)
+
+        loss_batch.backward()
+
+        loss_total += loss_batch * len(idx_u)
+        if args.tensorboard:
+            w.add_scalar(f'BPRLoss/BPR', cri, epoch * int(len(idx_u) / args.bpr_batch_size) + i)
+
     time_info = timer.dict()
     timer.zero()
-    return f"loss{aver_loss:.3f}-{time_info}"
+    return f"loss{loss_total / n_batch:.3f}-{time_info}"
     
     
-def test_one_batch(X):
+def evaluate_one_batch(X):
     sorted_items = X[0].numpy()
     groundTrue = X[1]
     r = utils.getLabel(groundTrue, sorted_items)
@@ -66,13 +52,14 @@ def test_one_batch(X):
             'ndcg':np.array(ndcg)}
         
             
-def Test(dataset, Recmodel, epoch, w=None, multicore=0):
+def evaluate(dataset, model, epoch, w=None, multicore=0):
+    cprint('[TEST]')
     u_batch_size = world.config['test_u_batch_size']
     dataset: utils.BasicDataset
     testDict: dict = dataset.testDict
-    Recmodel: model.LightGCN
+    model: model.LightGCN
     # eval mode with no dropout
-    Recmodel = Recmodel.eval()
+    model = model.eval()
     max_K = max(world.topks)
     if multicore == 1:
         pool = multiprocessing.Pool(CORES)
@@ -97,7 +84,7 @@ def Test(dataset, Recmodel, epoch, w=None, multicore=0):
             batch_users_gpu = torch.Tensor(batch_users).long()
             batch_users_gpu = batch_users_gpu.to(world.device)
 
-            rating = Recmodel.getUsersRating(batch_users_gpu)
+            rating = model.getUsersRating(batch_users_gpu)
             #rating = rating.cpu()
             exclude_index = []
             exclude_items = []
@@ -120,11 +107,11 @@ def Test(dataset, Recmodel, epoch, w=None, multicore=0):
         assert total_batch == len(users_list)
         X = zip(rating_list, groundTrue_list)
         if multicore == 1:
-            pre_results = pool.map(test_one_batch, X)
+            pre_results = pool.map(evaluate_one_batch, X)
         else:
             pre_results = []
             for x in X:
-                pre_results.append(test_one_batch(x))
+                pre_results.append(evaluate_one_batch(x))
         scale = float(u_batch_size/len(users))
         for result in pre_results:
             results['recall'] += result['recall']
