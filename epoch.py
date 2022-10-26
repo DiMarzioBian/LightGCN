@@ -3,18 +3,16 @@ import torch
 
 from config import args, cprint
 from metrics import *
-from sample import UniformSample_original
+from sample import sample_uniform
 from utils import minibatch, shuffle
 import multiprocessing
 
-CORES = multiprocessing.cpu_count() // 2
-
 
 def train(model, optimizer, dataset, epoch, writer=None):
-    S = UniformSample_original(dataset).to(args.device)
+    S = sample_uniform(dataset).to(args.device)
     all_idx_u, all_idx_i_pos, all_idx_i_neg = shuffle(torch.Tensor(S[:, 0]).long(),
-                                                            torch.Tensor(S[:, 1]).long(),
-                                                            torch.Tensor(S[:, 2]).long())
+                                                      torch.Tensor(S[:, 1]).long(),
+                                                      torch.Tensor(S[:, 2]).long())
     loss_total = 0.
 
     model.train()
@@ -35,14 +33,14 @@ def train(model, optimizer, dataset, epoch, writer=None):
 
 def evaluate_one_batch(X):
     sorted_items = X[0].numpy()
-    groundTrue = X[1]
-    r = get_label(groundTrue, sorted_items)
+    gt = X[1]
+    r = get_label(gt, sorted_items)
     pre, recall, ndcg = [], [], []
     for k in args.topk:
-        ret = cal_recall(groundTrue, r, k)
+        ret = cal_recall(gt, r, k)
         pre.append(ret['precision'])
         recall.append(ret['recall'])
-        ndcg.append(cal_ndcg(groundTrue, r, k))
+        ndcg.append(cal_ndcg(gt, r, k))
     return {'recall': np.array(recall),
             'precision': np.array(pre),
             'ndcg': np.array(ndcg)}
@@ -55,8 +53,6 @@ def evaluate(dataset, model, epoch, w=None, multicore=0):
     # eval mode with no dropout
     model = model.eval()
     max_K = max(args.topk)
-    if multicore == 1:
-        pool = multiprocessing.Pool(CORES)
     res = {'loss': 0,
            'recall': np.zeros(len(args.topk)),
            'ndcg': np.zeros(len(args.topk))}
@@ -94,12 +90,10 @@ def evaluate(dataset, model, epoch, w=None, multicore=0):
             groundTrue_list.append(groundTrue)
 
         assert total_batch == len(users_list)
-        X = zip(rating_list, groundTrue_list)
 
         pre_res = []
-        for x in X:
+        for x in zip(rating_list, groundTrue_list):
             pre_res.append(evaluate_one_batch(x))
-        scale = float(args.eval_batch_size/len(users))
 
         for r in pre_res:
             res['recall'] += r['recall']

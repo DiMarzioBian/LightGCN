@@ -19,16 +19,15 @@ def parse_args():
     parser.add_argument('--n_layer', type=int, default=3, help='the layer num of lightGCN')
     parser.add_argument('--pretrain', action='store_true', help='whether we use pretrained weight or not')
     parser.add_argument('--init_normal', action='store_false', help='use normal initialization or uniform')
-    parser.add_argument('--dropout', type=int, default=0, help='using the dropout or not')
-    parser.add_argument('--keepprob', type=float, default=0.6,
-                        help='the batch size for bpr loss training procedure')
+    parser.add_argument('--dropout', type=float, default=0, help='dropout ratio')
 
     # general settings
     parser.add_argument('--dataset', type=str, default='gowalla', help='lastfm, gowalla, yelp, book, garden')
     parser.add_argument('--tensorboard', action='store_false', help='enable tensorboard')
-    parser.add_argument('--device', type=int, default=0, help='index of avail cuda')
+    parser.add_argument('--cuda', type=int, default=0, help='index of cuda used')
     parser.add_argument('--load', type=str, default='', help='name of model params to be loaded')
     parser.add_argument('--topk', nargs='?', default='[20]', help='@k test list')
+    parser.add_argument('--negk', type=int, default=1, help='# negative items')
     parser.add_argument('--comment', type=str, default='lgn')
 
     # training settings
@@ -65,6 +64,6 @@ args.path_ckpt = join(args.path_root, 'checkpoints')
 
 
 if torch.cuda.is_available():
-    args.cuda = torch.device('cuda:' + str(args.device))
+    args.device = torch.device('cuda:' + str(args.cuda))
 else:
     raise NotImplementedError('Model does not support CPU.')

@@ -13,7 +13,7 @@ class LightGCN(nn.Module):
         self.n_item = args.n_item
         self.d_latent = args.d_latent
         self.n_layer = args.n_layer
-        self.keep_prob = args.keep_prob
+        self.dropout = args.dropout
         self.a_split = args.a_split
 
         self.embeds_u = torch.nn.Embedding(self.n_user, self.latent_dim)
@@ -32,35 +32,31 @@ class LightGCN(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-    def dropout_x(self, x):
-        size = x.size()
-        index = x.indices().t()
-        values = x.values()
-        random_index = torch.rand(len(values)) + self.keep_prob
-        random_index = random_index.int().bool()
+    def drop_node(self, g):
+        size = g.size()
+        index = g.indices().t()
+        values = g.values()
+
+        random_index = (torch.rand(len(values)) + self.dropout).int().bool()
         index = index[random_index]
-        values = values[random_index] / self.keep_prob
-        g = torch.sparse.FloatTensor(index.t(), values, size)
-        return g
+        values = values[random_index] / self.dropout
+
+        g_out = torch.sparse.FloatTensor(index.t(), values, size)
+        return g_out
 
     def dropout(self):
         if self.a_split:
-            graph = []
-            for g in self.graph:
-                graph.append(self.dropout_x(g))
+            graph = [self.drop_node(g) for g in self.graph]
         else:
-            graph = self.dropout_x(self.graph)
+            graph = self.drop_node(self.graph)
         return graph
 
     def aggregate(self):
         all_emb = torch.cat([self.embeds_u.weight, self.embeds_i.weight])
         x_all = [all_emb]
 
-        if self.config['dropout']:
-            if self.training:
-                g_drop = self.dropout()
-            else:
-                g_drop = self.graph
+        if self.dropout and self.training:
+            g_drop = self.dropout()
         else:
             g_drop = self.graph
 

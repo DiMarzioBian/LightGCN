@@ -1,13 +1,7 @@
 import numpy as np
 
-from config import args
 
-
-def UniformSample_original(dataset):
-    return UniformSample_original_python(dataset)
-
-
-def UniformSample_original_python(dataset):
+def sample_uniform(dataset):
     user_num = dataset.trainDataSize
     users = np.random.randint(0, dataset.n_user, user_num)
     allPos = dataset.allPos
