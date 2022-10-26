@@ -5,7 +5,6 @@ import pandas as pd
 from torch.utils.data import Dataset
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
-from config import args, cprint
 from time import time
 from config import args, cprint
 
