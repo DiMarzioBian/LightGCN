@@ -4,13 +4,12 @@ from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 import pandas as pd
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 from config import args, cprint
 
 
 class RecDataset(Dataset):
-    """ Recommendation dataset """
     def __init__(self):
         self.device = args.device
         self.split = args.a_split
@@ -63,9 +62,6 @@ class RecDataset(Dataset):
         self.testItem = np.array(testItem)
 
         self.graph = None
-        print(f'{self.trainDataSize} interactions for training')
-        print(f'{self.testDataSize} interactions for testing')
-        print(f'{self.dataset} Sparsity : {(self.trainDataSize + self.testDataSize) / self.n_user / self.n_item}')
 
         # (users,items), bipartite graph
         self.UserItemNet = csr_matrix((np.ones(len(self.trainUser)), (self.trainUser, self.tr_i)),
@@ -159,6 +155,18 @@ def collate_fn(seq_batch, mask_batch, gt_batch):
 
 
 def get_dataloader():
+    if args.dataset in ['gowalla', 'yelp2018', 'amazon-book']:
+        DS = RecDataset
+    else:
+        assert args.dataset == 'lastfm'
+        DS = LastFMDataset
+
+    train_loader = DataLoader(DS(train_data), batch_size=args.tr_batch_size, num_workers=args.num_workers,
+                              collate_fn=collate_fn, shuffle=True)
+    val_loader = DataLoader(DS(eval_data), batch_size=args.eval_batch_size, num_workers=args.num_workers,
+                            collate_fn=collate_fn, shuffle=True)
+    test_loader = DataLoader(DS(test_data), batch_size=args.eval_batch_size, num_workers=args.num_workers,
+                             collate_fn=collate_fn, shuffle=False)
     if args.dataset in ['gowalla', 'yelp2018', 'amazon-book']:
         return RecDataset()
     else:

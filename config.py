@@ -32,6 +32,7 @@ def parse_args():
 
     # training settings
     parser.add_argument('--seed', type=int, default=3407, help='random seed')
+    parser.add_argument('--num_workers', type=int, default=8, help='num of data loader')
     parser.add_argument('--tr_batch_size', type=int, default=2048, help='training batch size')
     parser.add_argument('--eval_batch_size', type=int, default=100, help='evaluating batch size')
     parser.add_argument('--n_fold', type=int, default=100,
