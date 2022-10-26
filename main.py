@@ -7,7 +7,8 @@ from torch.utils.tensorboard import SummaryWriter
 from config import args, cprint
 from utils.utils import load_ckpt, save_ckpt
 from dataloader import get_dataloader
-from models import PureMF, LightGCN
+from models.MF import MF
+from models.LightGCN import LightGCN
 from epoch import train, evaluate
 
 
@@ -23,7 +24,7 @@ def main():
         model = LightGCN(dataset.get_sparse_graph()).to(args.cuda)
     else:
         assert args.model == 'mf'
-        model = PureMF().to(args.cuda)
+        model = MF().to(args.cuda)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_patience*2, gamma=args.lr_factor)

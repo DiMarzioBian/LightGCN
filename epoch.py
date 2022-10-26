@@ -3,6 +3,7 @@ import numpy as np
 import torch
 
 from config import args, cprint
+from utils.metrics import *
 from utils.sample import UniformSample_original
 from utils.utils import minibatch, shuffle
 import multiprocessing
@@ -15,7 +16,6 @@ def train(model, optimizer, dataset, epoch, writer=None):
     all_idx_u, all_idx_i_pos, all_idx_i_neg = shuffle(torch.Tensor(S[:, 0]).long(),
                                                             torch.Tensor(S[:, 1]).long(),
                                                             torch.Tensor(S[:, 2]).long())
-    n_batch = len(all_idx_u) // args.tr_batch_size + 1
     loss_total = 0.
 
     model.train()
@@ -37,91 +37,83 @@ def train(model, optimizer, dataset, epoch, writer=None):
 def evaluate_one_batch(X):
     sorted_items = X[0].numpy()
     groundTrue = X[1]
-    r = utils.getLabel(groundTrue, sorted_items)
+    r = get_label(groundTrue, sorted_items)
     pre, recall, ndcg = [], [], []
-    for k in world.topks:
-        ret = utils.RecallPrecision_ATk(groundTrue, r, k)
+    for k in args.topk:
+        ret = cal_recall(groundTrue, r, k)
         pre.append(ret['precision'])
         recall.append(ret['recall'])
-        ndcg.append(utils.NDCGatK_r(groundTrue, r, k))
-    return {'recall':np.array(recall), 
-            'precision':np.array(pre), 
-            'ndcg':np.array(ndcg)}
+        ndcg.append(cal_ndcg(groundTrue, r, k))
+    return {'recall': np.array(recall),
+            'precision': np.array(pre),
+            'ndcg': np.array(ndcg)}
         
             
 def evaluate(dataset, model, epoch, w=None, multicore=0):
     cprint('[TEST]')
-    u_batch_size = world.config['test_u_batch_size']
-    dataset: utils.BasicDataset
     testDict: dict = dataset.testDict
     model: model.LightGCN
     # eval mode with no dropout
     model = model.eval()
-    max_K = max(world.topks)
+    max_K = max(args.topk)
     if multicore == 1:
         pool = multiprocessing.Pool(CORES)
     res = {'loss': 0,
-           'recall': np.zeros(len(world.topks)),
-           'ndcg': np.zeros(len(world.topks))}
+           'recall': np.zeros(len(args.topk)),
+           'ndcg': np.zeros(len(args.topk))}
     with torch.no_grad():
         users = list(testDict.keys())
         try:
-            assert u_batch_size <= len(users) / 10
+            assert args.eval_batch_size <= len(users) / 10
         except AssertionError:
             print(f"test_u_batch_size is too big for this dataset, try a small one {len(users) // 10}")
         users_list = []
         rating_list = []
         groundTrue_list = []
-        # auc_record = []
-        # ratings = []
-        total_batch = len(users) // u_batch_size + 1
-        for batch_users in utils.minibatch(users, batch_size=u_batch_size):
+        auc_record = []
+        total_batch = len(users) // args.eval_batch_size + 1
+        for batch_users in minibatch(users, batch_size=args.eval_batch_size):
             allPos = dataset.getUserPosItems(batch_users)
             groundTrue = [testDict[u] for u in batch_users]
             batch_users_gpu = torch.Tensor(batch_users).long()
-            batch_users_gpu = batch_users_gpu.to(world.device)
+            batch_users_gpu = batch_users_gpu.to(args.device)
 
             rating = model.getUsersRating(batch_users_gpu)
-            #rating = rating.cpu()
             exclude_index = []
             exclude_items = []
             for range_i, items in enumerate(allPos):
                 exclude_index.extend([range_i] * len(items))
                 exclude_items.extend(items)
-            rating[exclude_index, exclude_items] = -(1<<10)
+            rating[exclude_index, exclude_items] = -(1 << 10)
             _, rating_K = torch.topk(rating, k=max_K)
             rating = rating.cpu().numpy()
-            # aucs = [ 
-            #         utils.AUC(rating[i],
-            #                   dataset, 
-            #                   test_data) for i, test_data in enumerate(groundTrue)
-            #     ]
-            # auc_record.extend(aucs)
+            auc_record.extend([cal_auc(rating[i], dataset, test_data) for i, test_data in enumerate(groundTrue)])
             del rating
+
             users_list.append(batch_users)
             rating_list.append(rating_K.cpu())
             groundTrue_list.append(groundTrue)
+
         assert total_batch == len(users_list)
         X = zip(rating_list, groundTrue_list)
-        if multicore == 1:
-            pre_res = pool.map(evaluate_one_batch, X)
-        else:
-            pre_res = []
-            for x in X:
-                pre_res.append(evaluate_one_batch(x))
-        scale = float(u_batch_size/len(users))
+
+        pre_res = []
+        for x in X:
+            pre_res.append(evaluate_one_batch(x))
+        scale = float(args.eval_batch_size/len(users))
+
         for r in pre_res:
             res['recall'] += r['recall']
             res['ndcg'] += r['ndcg']
         res['recall'] /= float(len(users))
         res['ndcg'] /= float(len(users))
-        # res['auc'] = np.mean(auc_record)
+        res['auc'] = np.mean(auc_record)
         if args.tensorboard:
-            w.add_scalars(f'Test/Recall@{args.k_top}',
-                          {str(args.k_top[i]): res['recall'][i] for i in range(len(args.k_top))}, epoch)
-            w.add_scalars(f'Test/NDCG@{args.k_top}',
-                          {str(args.k_top[i]): res['ndcg'][i] for i in range(len(args.k_top))}, epoch)
-        if multicore == 1:
-            pool.close()
+            w.add_scalars(f'Test/Recall@{args.topk}',
+                          {str(args.topk[i]): res['recall'][i] for i in range(len(args.topk))}, epoch)
+            w.add_scalars(f'Test/NDCG@{args.topk}',
+                          {str(args.topk[i]): res['ndcg'][i] for i in range(len(args.topk))}, epoch)
+            w.add_scalars(f'Test/AUC@{args.topk}',
+                          {str(args.topk[i]): res['auc'][i] for i in range(len(args.topk))}, epoch)
         print(res)
         return res

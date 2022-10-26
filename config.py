@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--tensorboard', action='store_false', help='enable tensorboard')
     parser.add_argument('--device', type=int, default=0, help='index of avail cuda')
     parser.add_argument('--load', type=str, default='', help='name of model params to be loaded')
-    parser.add_argument('--k_top', nargs='?', default='[20]', help='@k test list')
+    parser.add_argument('--topk', nargs='?', default='[20]', help='@k test list')
     parser.add_argument('--comment', type=str, default='lgn')
 
     # training settings
@@ -72,4 +72,3 @@ if torch.cuda.is_available():
     args.cuda = torch.device('cuda:' + str(args.device))
 else:
     raise NotImplementedError('Model does not support CPU.')
-
