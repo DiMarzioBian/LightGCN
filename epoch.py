@@ -1,11 +1,10 @@
 import time
-import numpy as np
 import torch
 
 from config import args, cprint
-from utils.metrics import *
-from utils.sample import UniformSample_original
-from utils.utils import minibatch, shuffle
+from metrics import *
+from sample import UniformSample_original
+from utils import minibatch, shuffle
 import multiprocessing
 
 CORES = multiprocessing.cpu_count() // 2

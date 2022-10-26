@@ -132,7 +132,6 @@ class Loader(Dataset):
     def __init__(self, path='./data/gowalla'):
         # train or test
         cprint(f'loading [{path}]')
-        self.dataset = args.dataset
         self.device = args.device
         self.split = args.a_split
         self.folds = args.n_fold

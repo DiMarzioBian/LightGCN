@@ -5,6 +5,25 @@ import torch
 
 from config import args
 
+IDX_PAD = 0
+
+MAPPING_COLOR = {
+    'red': 41,
+    'green': 42,
+    'yellow': 43,
+    'blue': 44,
+    'cyan': 46,
+    'white': 47
+}
+
+MAPPING_DATASET = {
+    'book': ['amazon-book', 'Movies_and_TV_5.json'],
+    'garden': ['amazon-garden', 'Patio_Lawn_and_Garden_5.json'],
+    'gowalla': ['gowalla', 'Patio_Lawn_and_Garden_5.json'],
+    'yelp': ['yelp2018', 'Patio_Lawn_and_Garden_5.json'],
+    'lastfm': ['lastfm', 'Patio_Lawn_and_Garden_5.json'],
+}
+
 
 def load_ckpt(model, scheduler):
     device_old = re.split('-', args.path_ckpt)[2]
@@ -25,9 +44,7 @@ def save_ckpt(epoch_cur, model, scheduler):
 
 
 def minibatch(*tensors, **kwargs):
-
     batch_size = kwargs.get('batch_size', args.tr_batch_size)
-
     if len(tensors) == 1:
         tensor = tensors[0]
         for i in range(0, len(tensor), batch_size):
@@ -38,9 +55,7 @@ def minibatch(*tensors, **kwargs):
 
 
 def shuffle(*arrays, **kwargs):
-
     require_indices = kwargs.get('indices', False)
-
     if len(set(len(x) for x in arrays)) != 1:
         raise ValueError('All inputs to shuffle must have '
                          'the same length.')

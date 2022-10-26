@@ -3,11 +3,6 @@ from sklearn.metrics import roc_auc_score
 
 
 def cal_recall(test_data, r, k):
-    """
-    test_data should be a list? cause users may have different amount of pos items. shape (test_batch, k)
-    pred_data : shape (test_batch, k) NOTE: pred_data should be pre-sorted
-    k : top-k
-    """
     right_pred = r[:, :k].sum(1)
     precis_n = k
     recall_n = np.array([len(test_data[i]) for i in range(len(test_data))])
@@ -25,10 +20,6 @@ def cal_mrr(r, k):
 
 
 def cal_ndcg(test_data, r, k):
-    """
-    Normalized Discounted Cumulative Gain
-    rel_i = 1 or 0, so 2^{rel_i} - 1 = 1 or 0
-    """
     assert len(r) == len(test_data)
     pred_data = r[:, :k]
 

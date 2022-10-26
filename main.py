@@ -5,7 +5,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from config import args, cprint
-from utils.utils import load_ckpt, save_ckpt
+from utils import load_ckpt, save_ckpt
 from dataloader import get_dataloader
 from models.MF import MF
 from models.LightGCN import LightGCN

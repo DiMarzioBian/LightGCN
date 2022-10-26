@@ -3,9 +3,15 @@ from os.path import join
 import torch
 import argparse
 
+from utils import IDX_PAD, MAPPING_DATASET, MAPPING_COLOR
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='lightGCN')
+
+    # experiment settings
+    parser.add_argument('--a_split', action='store_true', help='')
+    parser.add_argument('--bigdata', action='store_true', help='')
 
     # model settings
     parser.add_argument('--model', type=str, default='lightgcn', help='lightgcn, mf')
@@ -18,7 +24,7 @@ def parse_args():
                         help='the batch size for bpr loss training procedure')
 
     # general settings
-    parser.add_argument('--dataset', type=str, default='gowalla', help='lastfm, gowalla, yelp2018, amazon-book')
+    parser.add_argument('--dataset', type=str, default='gowalla', help='lastfm, gowalla, yelp, book, garden')
     parser.add_argument('--tensorboard', action='store_false', help='enable tensorboard')
     parser.add_argument('--device', type=int, default=0, help='index of avail cuda')
     parser.add_argument('--load', type=str, default='', help='name of model params to be loaded')
@@ -26,7 +32,6 @@ def parse_args():
     parser.add_argument('--comment', type=str, default='lgn')
 
     # training settings
-    parser.add_argument('--n_epoch', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=3407, help='random seed')
     parser.add_argument('--tr_batch_size', type=int, default=2048, help='training batch size')
     parser.add_argument('--eval_batch_size', type=int, default=100, help='evaluating batch size')
@@ -34,39 +39,30 @@ def parse_args():
                         help='the fold num used to split large adj matrix, like gowalla')
 
     # optimizer settings
+    parser.add_argument('--n_epoch', type=int, default=1000)
     parser.add_argument('--lr', type=float, default=0.001, help='the learning rate')
     parser.add_argument('--weight_decay', type=float, default=5e-3)
     parser.add_argument('--lr_patience', type=int, default=50)
-    parser.add_argument('--lr_factor', type=float, default=0.5, help='i.e. gamma value')
+    parser.add_argument('--lr_factor', type=float, default=0.5, help='gamma value')
     parser.add_argument('--lr_n_decay', type=int, default=100)
 
     return parser.parse_args()
 
 
-map_color = {
-    'red': 41,
-    'green': 42,
-    'yellow': 43,
-    'blue': 44,
-    'cyan': 46,
-    'white': 47
-}
-
-
 def cprint(words: str, c: str = 'blue'):
-    color = map_color[c]
+    color = MAPPING_COLOR[c]
     print(f'\033[0;30;{color}m{words}\033[0m')
 
 
 args = parse_args()
+args.idx_pad = IDX_PAD
 
+(args.dataset, _) = MAPPING_DATASET[args.dataset]
 args.path_root = os.getcwd()
-args.path_data = join(args.path_root, 'data')
+args.path_data = join(join(args.path_root, 'data'), args.dataset)
 args.path_board = join(args.path_root, 'runs')
 args.path_ckpt = join(args.path_root, 'checkpoints')
 
-args.a_split = False
-args.bigdata = False
 
 if torch.cuda.is_available():
     args.cuda = torch.device('cuda:' + str(args.device))
