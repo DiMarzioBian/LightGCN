@@ -2,7 +2,7 @@ from os.path import join
 import time
 import numpy as np
 import torch
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from config import args, cprint
 from utils.utils import load_ckpt, save_ckpt
