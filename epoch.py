@@ -2,10 +2,9 @@ import time
 import torch
 
 from config import args, cprint
-from metrics import *
+from utils.metrics import *
 from sample import sample_uniform
-from utils import minibatch, shuffle
-import multiprocessing
+from utils.save import minibatch, shuffle
 
 
 def train(model, optimizer, dataset, epoch, writer=None):

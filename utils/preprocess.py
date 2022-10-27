@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import argparse
 
-from utils import MAPPING_DATASET
+from utils.constant import MAPPING_DATASET
 
 
 def read_amazon(dataset: str, path: str):
@@ -72,7 +72,7 @@ def reindex_data(df: pd.DataFrame):
     return df
 
 
-def save_csv(df: pd.DataFrame, path: str):
+def save_data(df: pd.DataFrame, path: str):
     df.to_csv(path, index=False)
     print('\n[info] CSV save to file:', path)
 
@@ -85,8 +85,8 @@ def main():
 
     # detect dataset
     (dataset, f_name) = MAPPING_DATASET[args.dataset]
-    path_raw = os.getcwd() + f'/data/{f_name}'
-    path_csv = os.getcwd() + f'/data_processed/{dataset}_5.csv'
+    path_raw = os.path.dirname(os.getcwd()) + f'/raw/{f_name}'
+    path_data = os.path.dirname(os.getcwd()) + f'/data/{dataset}/'
 
     if os.path.exists(path_raw):
         print(f'\n[Info] Successfully detect dataset [{dataset}].')
@@ -108,7 +108,7 @@ def main():
         df_5_raw = read_lastfm(dataset, path_raw)
 
     df_5 = reindex_data(df_5_raw)
-    save_csv(df_5, path_csv)
+    save_data(df_5, path_data)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ from os.path import join
 import torch
 import argparse
 
-from utils import IDX_PAD, MAPPING_DATASET, MAPPING_COLOR
+from utils.constant import IDX_PAD, MAPPING_DATASET, MAPPING_COLOR
 
 
 def parse_args():

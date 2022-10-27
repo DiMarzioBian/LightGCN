@@ -134,15 +134,16 @@ class Loader(Dataset):
         self.device = args.device
         self.split = args.a_split
         self.folds = args.n_fold
-        self.mode_dict = {'train': 0, 'test': 1}
+        self.mode_dict = {'train': 0, 'val':1, 'test': 2}
         self.mode = self.mode_dict['train']
         train_file = path + '/train.txt'
         test_file = path + '/test.txt'
         self.path = path
         trainUniqueUsers, trainItem, trainUser = [], [], []
         testUniqueUsers, testItem, testUser = [], [], []
-        self.traindataSize = 0
-        self.testDataSize = 0
+        self.len_tr = 0
+        self.len_val = 0
+        self.len_te = 0
 
         with open(train_file) as f:
             for line in f.readlines():
