@@ -2,6 +2,8 @@
 
 This is a Pytorch implementation of SIGIR'20 paper [LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation](https://arxiv.org/abs/2002.02126):
 
+Current under construction.
+
 The original PyTorch implementation is [here](https://github.com/gusye1234/LightGCN-PyTorch).
 
 
