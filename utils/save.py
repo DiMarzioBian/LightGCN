@@ -3,10 +3,8 @@ import re
 import numpy as np
 import torch
 
-from config import args
 
-
-def load_ckpt(model, scheduler):
+def load_ckpt(args, model, scheduler):
     device_old = re.split('-', args.path_ckpt)[2]
     ckpt = torch.load(join(args.path_ckpt, args.load), map_location={f'cuda:{device_old}': f'cuda:{args.device}'})
     model = model.load_state_dict(ckpt['params_model'])
@@ -14,7 +12,7 @@ def load_ckpt(model, scheduler):
     return ckpt['epoch_cur'], model, scheduler
 
 
-def save_ckpt(epoch_cur, model, scheduler):
+def save_ckpt(args, epoch_cur, model, scheduler):
     ckpt = {
         'epoch_cur': epoch_cur,
         'params_model': model.state_dict(),
@@ -24,7 +22,7 @@ def save_ckpt(epoch_cur, model, scheduler):
                                           f'.pth.tar'))
 
 
-def minibatch(*tensors, **kwargs):
+def minibatch(args, *tensors, **kwargs):
     batch_size = kwargs.get('batch_size', args.tr_batch_size)
     if len(tensors) == 1:
         tensor = tensors[0]

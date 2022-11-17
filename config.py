@@ -3,7 +3,24 @@ from os.path import join
 import torch
 import argparse
 
-from utils.constant import IDX_PAD, MAPPING_DATASET, MAPPING_COLOR
+IDX_PAD = 0
+
+MAPPING_COLOR = {
+    'red': 41,
+    'green': 42,
+    'yellow': 43,
+    'blue': 44,
+    'cyan': 46,
+    'white': 47
+}
+
+MAPPING_DATASET = {
+    'book': ['amazon-book', 'Movies_and_TV_5.json'],
+    'garden': ['amazon-garden', 'Patio_Lawn_and_Garden_5.json'],
+    'gowalla': ['gowalla', 'Patio_Lawn_and_Garden_5.json'],
+    'yelp': ['yelp2018', 'Patio_Lawn_and_Garden_5.json'],
+    'lastfm': ['lastfm', 'Patio_Lawn_and_Garden_5.json'],
+}
 
 
 def parse_args():
@@ -46,6 +63,21 @@ def parse_args():
     parser.add_argument('--lr_factor', type=float, default=0.5, help='gamma value')
     parser.add_argument('--lr_n_decay', type=int, default=100)
 
+    # set up
+    args = parser.parse_args()
+    args.idx_pad = IDX_PAD
+
+    (args.dataset, _) = MAPPING_DATASET[args.dataset]
+    args.path_root = os.getcwd()
+    args.path_data = join(join(args.path_root, 'data'), args.dataset)
+    args.path_board = join(args.path_root, 'runs')
+    args.path_ckpt = join(args.path_root, 'checkpoints')
+
+    if torch.cuda.is_available() and args.cuda in torch.get_all_devices():
+        args.device = torch.device('cuda:' + str(args.cuda))
+    else:
+        raise NotImplementedError('CPU or selected GPU is not available.')
+
     return parser.parse_args()
 
 
@@ -54,17 +86,3 @@ def cprint(words: str, c: str = 'blue'):
     print(f'\033[0;30;{color}m{words}\033[0m')
 
 
-args = parse_args()
-args.idx_pad = IDX_PAD
-
-(args.dataset, _) = MAPPING_DATASET[args.dataset]
-args.path_root = os.getcwd()
-args.path_data = join(join(args.path_root, 'data'), args.dataset)
-args.path_board = join(args.path_root, 'runs')
-args.path_ckpt = join(args.path_root, 'checkpoints')
-
-
-if torch.cuda.is_available():
-    args.device = torch.device('cuda:' + str(args.cuda))
-else:
-    raise NotImplementedError('Model does not support CPU.')

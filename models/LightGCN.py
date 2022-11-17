@@ -1,11 +1,10 @@
-from config import args, cprint
 import torch
 from torch import nn
 from torch.nn import functional as F
 
 
 class LightGCN(nn.Module):
-    def __init__(self, graph):
+    def __init__(self, args, graph):
         super().__init__()
         self.graph = graph
 

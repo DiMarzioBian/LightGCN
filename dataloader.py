@@ -6,13 +6,12 @@ from torch.utils.data import Dataset
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 from time import time
-from config import args, cprint
 
 
 class LastFM(Dataset):
-    def __init__(self, path='./data/lastfm'):
+    def __init__(self, args, path='./data/lastfm'):
         # train or test
-        cprint('loading [last fm]')
+        print('loading [last fm]')
         self.mode_dict = {'train': 0, 'test': 1}
         self.mode = self.mode_dict['train']
         self.device = args.device
@@ -128,9 +127,9 @@ class LastFM(Dataset):
 
 
 class Loader(Dataset):
-    def __init__(self, path='./data/gowalla'):
+    def __init__(self, args, path='./data/gowalla'):
         # train or test
-        cprint(f'loading [{path}]')
+        print(f'loading [{path}]')
         self.device = args.device
         self.split = args.a_split
         self.folds = args.n_fold
@@ -294,7 +293,7 @@ class Loader(Dataset):
         return negItems
 
 
-def get_dataloader():
+def get_dataloader(args):
     if args.dataset in ['gowalla', 'yelp2018', 'amazon-book']:
         return Loader(path='./data/' + args.dataset)
     else:

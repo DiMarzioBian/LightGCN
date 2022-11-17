@@ -1,11 +1,10 @@
-from config import args, cprint
 import torch
 from torch import nn
 from torch.nn import functional as F
 
 
 class MF(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
         self.n_user = args.n_user
         self.n_item = args.n_item

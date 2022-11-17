@@ -1,13 +1,12 @@
 import time
 import torch
 
-from config import args, cprint
 from utils.metrics import *
 from sample import sample_uniform
 from utils.save import minibatch, shuffle
 
 
-def train(model, optimizer, dataset, epoch, writer=None):
+def train(args, model, optimizer, dataset, epoch, writer=None):
     S = sample_uniform(dataset).to(args.device)
     all_idx_u, all_idx_i_pos, all_idx_i_neg = shuffle(torch.Tensor(S[:, 0]).long(),
                                                       torch.Tensor(S[:, 1]).long(),
@@ -18,7 +17,8 @@ def train(model, optimizer, dataset, epoch, writer=None):
     optimizer.zero_grad()
 
     time_start = time.time()
-    for i, (idx_u, idx_i_pos, idx_i_neg) in enumerate(minibatch(all_idx_u, all_idx_i_pos, all_idx_i_neg, batch_size=args.bpr_batch_size)):
+    for i, (idx_u, idx_i_pos, idx_i_neg) in enumerate(minibatch(all_idx_u, all_idx_i_pos, all_idx_i_neg,
+                                                                batch_size=args.bpr_batch_size)):
         loss_batch = model.cal_loss(idx_u, idx_i_pos, idx_i_neg)
         loss_batch.backward()
         optimizer.step()
@@ -30,12 +30,12 @@ def train(model, optimizer, dataset, epoch, writer=None):
     return loss_total / len(all_idx_u), time.time() - time_start
 
 
-def evaluate_one_batch(X):
-    sorted_items = X[0].numpy()
-    gt = X[1]
+def evaluate_one_batch(x, topk):
+    sorted_items = x[0].numpy()
+    gt = x[1]
     r = get_label(gt, sorted_items)
     pre, recall, ndcg = [], [], []
-    for k in args.topk:
+    for k in topk:
         ret = cal_recall(gt, r, k)
         pre.append(ret['precision'])
         recall.append(ret['recall'])
@@ -45,8 +45,8 @@ def evaluate_one_batch(X):
             'ndcg': np.array(ndcg)}
         
             
-def evaluate(dataset, model, epoch, w=None, multicore=0):
-    cprint('[TEST]')
+def evaluate(args, dataset, model, epoch, w=None, multicore=0):
+    print('[TEST]')
     testDict: dict = dataset.testDict
     model: model.LightGCN
     # eval mode with no dropout
@@ -92,7 +92,7 @@ def evaluate(dataset, model, epoch, w=None, multicore=0):
 
         pre_res = []
         for x in zip(rating_list, groundTrue_list):
-            pre_res.append(evaluate_one_batch(x))
+            pre_res.append(evaluate_one_batch(x, args.topk))
 
         for r in pre_res:
             res['recall'] += r['recall']

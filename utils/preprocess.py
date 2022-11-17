@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import argparse
 
-from utils.constant import MAPPING_DATASET
+from config import MAPPING_DATASET
 
 
 def read_amazon(dataset: str, path: str):

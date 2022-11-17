@@ -6,11 +6,9 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from config import args, cprint
-
 
 class RecDataset(Dataset):
-    def __init__(self):
+    def __init__(self, args):
         self.device = args.device
         self.split = args.a_split
         self.folds = args.n_fold
@@ -93,7 +91,7 @@ class RecDataset(Dataset):
 
 class LastFMDataset(Dataset):
     """ Recommendation dataset """
-    def __init__(self):
+    def __init__(self, args):
         self.path_data = args.path_data
         self.index_mask = 0
         self.all_seq, self.mask, self.len_max = self.get_data_mask(data[0])
@@ -154,7 +152,7 @@ def collate_fn(seq_batch, mask_batch, gt_batch):
     return A_batch, items_batch, seq_alias_batch, mask_batch, gt_batch
 
 
-def get_dataloader():
+def get_dataloader(args):
     if args.dataset in ['gowalla', 'yelp2018', 'amazon-book']:
         DS = RecDataset
     else:
