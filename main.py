@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from config import parse_args
+from arguments import parse_args
 from utils.save import load_ckpt, save_ckpt
 from dataloader import get_dataloader
 from models.MF import MF
