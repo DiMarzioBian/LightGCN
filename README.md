@@ -1,6 +1,6 @@
 # LightGCN-pytorch
 
-This is a Pytorch implementation of SIGIR'20 paper [LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation](https://arxiv.org/abs/2002.02126):
+This is an unofficial Pytorch implementation of SIGIR'20 paper [LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation](https://arxiv.org/abs/2002.02126):
 
 Current under construction.
 
